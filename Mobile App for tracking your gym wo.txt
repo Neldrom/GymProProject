@@ -1,0 +1,17 @@
+Mobile App for tracking your gym workouts with key features:
+
+Customizable Workout Routines:
+
+Create and personalize your workout routines based on your fitness goals, whether it's strength training, endurance, or a balanced mix.
+
+Real-time Workout Tracking:
+
+Enable workouts as you start, and seamlessly record your sets and reps for each exercise during your training session.
+
+Data Storage and Profile Management:
+
+Save your workout history and track your training time effortlessly. Your workout data is securely stored in your profile, allowing you to revisit and analyze your progress over time.
+
+Progress Statistics:
+
+The app calculates your maximum volume and one-repetition maximum for each exercise, providing a clear overview of your strength gains.
