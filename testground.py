@@ -1,88 +1,95 @@
+from kivy.animation import Animation
 from kivy.lang import Builder
-from kivy.metrics import dp
-from kivy.properties import StringProperty
+from kivy.utils import get_color_from_hex
 
 from kivymd.app import MDApp
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.list import IRightBodyTouch, OneLineAvatarIconListItem
-from kivymd.uix.menu import MDDropdownMenu
+from kivymd.uix.list import TwoLineAvatarListItem
 
 KV = '''
-<RightContentCls>
-    disabled: True
-    adaptive_size: True
-    pos_hint: {"center_y": .5}
+<MyItem>
+    text: "Two-line item with avatar"
+    secondary_text: "Secondary text here"
+    _no_ripple_effect: True
 
-    MDIconButton:
-        icon: root.icon
-        icon_size: "16sp"
-        md_bg_color_disabled: 0, 0, 0, 0
+    ImageLeftWidget:
+        source: "data/logo/kivy-icon-256.png"
 
-    MDLabel:
-        text: root.text
-        font_style: "Caption"
+
+MDBoxLayout:
+    orientation: "vertical"
+
+    MDTopAppBar:
+        id: toolbar
+        title: "Inbox"
+        left_action_items: [["menu"]]
+        right_action_items: [["magnify"], ["dots-vertical"]]
+        md_bg_color: 0, 0, 0, 1
+
+    MDBoxLayout:
+        padding: "24dp", "8dp", 0, "8dp"
         adaptive_size: True
-        pos_hint: {"center_y": .5}
 
+        MDLabel:
+            text: "Today"
+            adaptive_size: True
 
-<Item>
+    ScrollView:
 
-    IconLeftWidget:
-        icon: root.left_icon
-
-    RightContentCls:
-        id: container
-        icon: root.right_icon
-        text: root.right_text
-
-
-MDScreen:
-
-    MDRaisedButton:
-        id: button
-        text: "PRESS ME"
-        pos_hint: {"center_x": .5, "center_y": .5}
-        on_release: app.menu.open()
+        MDSelectionList:
+            id: selection_list
+            spacing: "12dp"
+            overlay_color: app.overlay_color[:-1] + [.2]
+            icon_bg_color: app.overlay_color
+            on_selected: app.on_selected(*args)
+            on_unselected: app.on_unselected(*args)
+            on_selected_mode: app.set_selection_mode(*args)
 '''
 
 
-class RightContentCls(IRightBodyTouch, MDBoxLayout):
-    icon = StringProperty()
-    text = StringProperty()
+class MyItem(TwoLineAvatarListItem):
+    pass
 
 
-class Item(OneLineAvatarIconListItem):
-    left_icon = StringProperty()
-    right_icon = StringProperty()
-    right_text = StringProperty()
-
-
-class Test(MDApp):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.screen = Builder.load_string(KV)
-        menu_items = [
-            {
-                "text": f"Item {i}",
-                "right_text": "+Shift+X",
-                "right_icon": "apple-keyboard-command",
-                "left_icon": "web",
-                "viewclass": "Item",
-                "height": dp(54),
-                "on_release": lambda x=f"Item {i}": self.menu_callback(x),
-            } for i in range(5)
-        ]
-        self.menu = MDDropdownMenu(
-            caller=self.screen.ids.button,
-            items=menu_items,
-            width_mult=4,
-        )
-
-    def menu_callback(self, text_item):
-        print(text_item)
+class Example(MDApp):
+    overlay_color = get_color_from_hex("#6042e4")
 
     def build(self):
-        return self.screen
+        return Builder.load_string(KV)
+
+    def on_start(self):
+        for i in range(10):
+            self.root.ids.selection_list.add_widget(MyItem())
+
+    def set_selection_mode(self, instance_selection_list, mode):
+        if mode:
+            md_bg_color = self.overlay_color
+            left_action_items = [
+                [
+                    "close",
+                    lambda x: self.root.ids.selection_list.unselected_all(),
+                ]
+            ]
+            right_action_items = [["trash-can"], ["dots-vertical"]]
+        else:
+            md_bg_color = (0, 0, 0, 1)
+            left_action_items = [["menu"]]
+            right_action_items = [["magnify"], ["dots-vertical"]]
+            self.root.ids.toolbar.title = "Inbox"
+
+        Animation(md_bg_color=md_bg_color, d=0.2).start(self.root.ids.toolbar)
+        self.root.ids.toolbar.left_action_items = left_action_items
+        self.root.ids.toolbar.right_action_items = right_action_items
+
+    def on_selected(self, instance_selection_list, instance_selection_item):
+        self.root.ids.toolbar.title = str(
+            len(instance_selection_list.get_selected_list_items())
+        )
+
+    def on_unselected(self, instance_selection_list, instance_selection_item):
+        if instance_selection_list.get_selected_list_items():
+            self.root.ids.toolbar.title = str(
+                len(instance_selection_list.get_selected_list_items())
+            )
 
 
-Test().run()
+Example().run()

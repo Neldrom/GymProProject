@@ -69,17 +69,20 @@
         bar_width: 0
         bar_width_x: 0
         effect_cls: "ScrollEffect"
-        always_overscroll: True
         do_scroll_y: True
         do_scroll_x: False
         size_hint: (1, 0.7)
         pos_hint: {"center_x": .5, "top": .8}
         scroll_x: 0
-        MDGridLayout:
-            height: self.minimum_height
-            size_hint_y: None
-            cols: 1
+        MDBoxLayout:
             id: exercise_screen
+            orientation: "vertical"
+            spacing: 10
+            padding: 10
+            size_hint_y: None
+            height: self.minimum_height
+
+
     MDRaisedButton:
         pos_hint: {"center_x": .5, "top": .1}
         text: "Save Routine"
