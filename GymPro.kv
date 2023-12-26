@@ -75,11 +75,21 @@
         size_hint: (1, 0.7)
         pos_hint: {"center_x": .5, "top": .8}
         scroll_x: 0
-        MDGridLayout:
+        MDBoxLayout:
             height: self.minimum_height
             size_hint_y: None
-            cols: 1
+            orientation: "horizontal"
             id: exercise_screen
+            MDSelectionList:
+                id: select_side
+                size_hint: (0.7, 1)
+                spacing: 12
+
+            MDBoxLayout:
+                id: info_button_side
+                size_hint: (0.3, 1)
+
+
     MDRaisedButton:
         pos_hint: {"center_x": .5, "top": .1}
         text: "Save Routine"

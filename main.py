@@ -3,13 +3,12 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
 from kivymd.uix.floatlayout import MDFloatLayout
 from kivymd.uix.gridlayout import MDGridLayout
-from kivymd.uix.list import MDList, OneLineListItem, TwoLineListItem
+from kivymd.uix.list import OneLineListItem, TwoLineListItem
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.screenmanager import ScreenManager
 from kivymd.uix.screen import MDScreen
 from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
-from kivymd.uix.segmentedcontrol import MDSegmentedControlItem, MDSegmentedControl
 from kivymd.uix.textfield import MDTextField
 from kivy.core.window import Window
 from pymongo_get_database import get_database
@@ -78,43 +77,49 @@ class BodyPartExercisesScreen(MDScreen):
         super().__init__(**kwargs)
         self.exercises = exercises
         self.exercise_index = 0
+        self.selected_exercises = []
 
     def on_pre_enter(self, *args):
-        self.ids.exercise_screen.clear_widgets()
+        # Get the actual widget instead of relying on weak references
+        select_side = self.ids.select_side
+        info_button_side = self.ids.info_button_side
+
+        # Clear existing widgets
+        select_side.clear_widgets()
+        info_button_side.clear_widgets()
+
         self.exercises_list = list(self.exercises)
         self.exercise_index = 0
+
         # Set scroll_y to 1 to keep it at the top
         self.ids.exercise_screen.scroll_y = 1
         self.add_next_exercise(1)
-        Clock.schedule_interval(self.add_next_exercise, 1)
 
     def add_next_exercise(self, dt):
         for i in range(0, 15):
             if self.exercise_index < len(self.exercises_list):
                 exercise = self.exercises_list[self.exercise_index]
-                label = MDLabel(text=f"{exercise['name'].title()}", size_hint_y=None)
+                label = TwoLineListItem(text=f"{exercise['name'].title()}", size_hint_y=None)
+
                 if self.exercise_index % 2 == 0:
                     label.md_bg_color = (0, 0, 0, 0.55)
-                # Bind the touch event to a new function
-                label.bind(on_touch_down=lambda instance, touch, exercise=exercise: self.on_label_touch(instance, touch,
-                                                                                                        exercise))
 
-                self.ids.exercise_screen.add_widget(label)
+                # Create MDRaisedButton with on_release event
+                info_button = MDRaisedButton(text="Info", on_release=lambda x=exercise: self.on_label_touch(x))
+
+                # Add widgets to the respective sides
+                self.ids.info_button_side.add_widget(info_button)
+                self.ids.select_side.add_widget(label)
+
                 self.exercise_index += 1
             else:
                 Clock.unschedule(self.add_next_exercise)
+
                 # Adjust scroll_y after adding items
                 self.ids.exercise_screen.scroll_y = 0
 
-    def on_label_touch(self, instance, touch, exercise):
-        if instance.collide_point(*touch.pos):
-            self.open_exercise(exercise, touch)
-
-    def open_exercise(self, exercise, touch):
-        screen = self.manager.get_screen("exercise_screen")
-        screen.exercise = exercise
-        screen.last_screen = 'body_part_exercise'
-        self.manager.current = "exercise_screen"
+    def on_label_touch(self, exercise):
+        self.selected_exercises.append(exercise)
 
     def on_add(self):
         self.manager.current = "edit_routine_screen"
