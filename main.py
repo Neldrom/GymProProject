@@ -1,5 +1,6 @@
 from functools import partial
 
+from kivy.lang import Builder
 from kivy.metrics import dp
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
@@ -20,6 +21,7 @@ from kivymd.uix.tab import MDTabsBase
 from ClickableTwoLineListItem import ClickableTwoLineListItem
 
 Window.size = 360, 640
+Builder.load_file('GymPro.kv')
 
 
 class Tab(MDFloatLayout, MDTabsBase):
