@@ -1,258 +1,269 @@
-from functools import partial
+from collections import defaultdict
+from datetime import datetime as dt
+from math import sin
+from statistics import mean
 
-from kivy.metrics import dp
+import matplotlib
+import numpy as np
+from kivy.lang import Builder
+from kivy.properties import ObjectProperty
+from kivy_garden.graph import Graph, MeshLinePlot
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.card import MDCard
-from kivymd.uix.floatlayout import MDFloatLayout
-from kivymd.uix.gridlayout import MDGridLayout
-from kivymd.uix.list import OneLineListItem, TwoLineListItem
-from kivymd.uix.menu import MDDropdownMenu
+
+from GymProProject.BodyPartExercisesScreen import BodyPartExercisesScreen
+from GymProProject.EditRoutineScreen import EditRoutineScreen
+from GymProProject.ExercisesScreen import ExercisesScreen
+from GymProProject.RoutineCard import RoutineCard
+from GymProProject.UserWorkoutCard import UserWorkoutCard
+from GymProProject.WorkoutScreen import WorkoutScreen
+from User import *
+from kivy.metrics import dp
 from kivymd.uix.screenmanager import ScreenManager
 from kivymd.uix.screen import MDScreen
 from kivymd.app import MDApp
-from kivymd.uix.label import MDLabel
 from kivymd.uix.textfield import MDTextField
 from kivy.core.window import Window
 from pymongo_get_database import get_database
 from kivymd.uix.button import MDRaisedButton
-from kivy.clock import Clock
-from kivymd.uix.tab import MDTabsBase
-from ClickableTwoLineListItem import ClickableTwoLineListItem
+from kivy_garden.graph import Graph, MeshLinePlot
+from matplotlib.dates import date2num
 
 Window.size = 360, 640
 
 
-class Tab(MDFloatLayout, MDTabsBase):
-    pass
-
-
-class ExercisesScreen(MDScreen):
-    def __init__(self, db, **kwargs):
-        super().__init__(**kwargs)
-        self.db = db
-        self.exercise = {}
-        self.summary_layout = MDBoxLayout()
-        self.history_layout = MDBoxLayout()
-        self.how_to_layout = MDBoxLayout()
-        self.last_screen = ''
-        self.ids.tabs.add_widget(Tab(title="Summary"))
-        self.ids.tabs.add_widget(Tab(title="History"))
-        self.ids.tabs.add_widget(Tab(title="How to"))
-
-    def on_tab_switch(self, instance_tabs, instance_tab, instance_tab_label, tab_text):
-        if tab_text == "Summary":
-            instance_tab.clear_widgets()
-            instance_tab.add_widget(self.summary_layout)
-        elif tab_text == "History":
-            instance_tab.clear_widgets()
-            instance_tab.add_widget(self.history_layout)
-        elif tab_text == "How to":
-            instance_tab.clear_widgets()
-            instance_tab.add_widget(self.how_to_layout)
-
-    def on_pre_enter(self):
-        self.summary_layout.clear_widgets()
-        self.summary_layout = MDFloatLayout(orientation="vertical")
-        self.summary_layout.add_widget(MDLabel(text="Summary Content"))
-        self.history_layout.clear_widgets()
-        self.history_layout = MDFloatLayout(orientation="vertical")
-        self.history_layout.add_widget(MDLabel(text="History Content"))
-        self.how_to_layout.clear_widgets()
-        self.how_to_layout = MDFloatLayout(orientation="vertical", size_hint=(1, 1))
-        self.how_to_layout.add_widget(MDLabel(text=f"{self.exercise['name'].title()}", size_hint_y=0.1,
-                                              pos_hint={"y": 0.85}, halign="left", padding=20)
-                                      )
-        list = MDBoxLayout(orientation="vertical", size_hint_y=0.8, pos_hint={"top": 0.85},
-                           spacing=10, padding=10)
-        for i in range(len(self.exercise['instructions'])):
-            instruction_text = f"{i + 1}. {self.exercise['instructions'][i]}"
-            list_item = MDLabel(text=instruction_text, padding=10)
-            list.add_widget(list_item)
-        self.how_to_layout.add_widget(list)
-        self.ids.tabs.switch_tab("Summary")
-
-    def back_button(self):
-        self.manager.current = self.last_screen
-
-
-class BodyPartExercisesScreen(MDScreen):
-    def __init__(self, exercises, **kwargs):
+class MainScreen(MDScreen):
+    def __init__(self, db, exercises, **kwargs):
         super().__init__(**kwargs)
         self.exercises = exercises
-        self.exercise_index = 0
-        self.selected_exercises = []
-
-    def on_pre_enter(self, *args):
-        # Clear existing widgets
-        self.ids.exercise_screen.clear_widgets()
-
-        self.exercises_list = list(self.exercises)
-        self.exercise_index = 0
-
-        # Set scroll_y to 1 to keep it at the top
-        self.ids.exercise_screen.scroll_y = 1
-        self.add_next_exercise(1)
-
-    def add_next_exercise(self, dt):
-        for i in range(0, 15):
-            if self.exercise_index < len(self.exercises_list):
-                exercise = self.exercises_list[self.exercise_index]
-
-                # Create ClickableTwoLineListItem with dynamic height
-                label = ClickableTwoLineListItem(exercise, size_hint_y=None, height=dp(55))
-                if self.exercise_index % 2 == 0:
-                    label.md_bg_color = (0, 0, 0, 0.55)
-
-                info_button = MDRaisedButton(
-                    text="Info",
-                    size_hint_y=None,
-                    height="55dp",  # Set the same height as the label
-                    theme_text_color="Custom",  # Use custom text color to prevent color overlap
-                    text_color=(1, 1, 1, 1),  # Set the text color for the button
-                    on_release=partial(self.open_exercise, exercise),
-                )
-                info_button.pos_hint = {"center_y": 0.5}  # Center the button vertically
-
-                # Create a BoxLayout for each row
-                row_layout = MDBoxLayout(
-                    orientation="horizontal",
-                    size_hint_y=None,
-                    height=label.height,  # Set the same height for the row
-                    spacing=15  # Set the desired spacing between label and button
-                )
-
-                # Add widgets to the row layout
-                row_layout.add_widget(label)
-                row_layout.add_widget(info_button)
-
-                # Add the row layout to the ScrollView
-                self.ids.exercise_screen.add_widget(row_layout)
-
-                self.exercise_index += 1
-            else:
-                Clock.unschedule(self.add_next_exercise)
-
-                # Adjust scroll_y after adding items
-                self.ids.exercise_screen.scroll_y = 0
-
-    def open_exercise(self, exercise, button_instance):
-        screen = self.manager.get_screen("exercise_screen")
-        screen.exercise = exercise
-        screen.last_screen = "body_part_exercise"
-        self.manager.current = "exercise_screen"
-
-    def on_label_touch(self, exercise):
-        self.selected_exercises.append(exercise)
-
-    def on_add(self):
-        self.manager.current = "edit_routine_screen"
-        Clock.unschedule(self.add_next_exercise)
-        self.ids.exercise_screen.clear_widgets()
-        # Set scroll_y back to 1 when clearing the widgets
-        self.ids.exercise_screen.scroll_y = 1
-
-
-class EditRoutineScreen(MDScreen):
-    def __init__(self, db, **kwargs):
-        super().__init__(**kwargs)
-        self.ids.edit_routine_layout.pos = (0, Window.height - dp(100))
         self.db = db
-        self.exercises = db.exercises.find()
-        self.body_parts = self.db.exercises.distinct("bodyPart")
-        self.add_button = MDRaisedButton(text="Add Exercise", padding=(100, 10), pos_hint={'center_x': 0.5}
-                                         , on_release=self.show_body_part_selection)
-        self.ids.edit_routine_layout.add_widget(MDTextField(hint_text="Routine Name"))
-        self.ids.edit_routine_layout.add_widget(self.add_button)
+        self.user = None
+        self.loaded = False
 
-    def show_body_part_selection(self, *args):
-        self.menu = MDDropdownMenu(
-            caller=self.add_button,
-            width_mult=4,
-        )
-        for body_part in self.body_parts:
-            self.menu.items.append(
-                {
-                    "text": f'{body_part.title()}',
-                    "viewclass": "OneLineListItem",
-                    "height": dp(46),
-                    "on_release": lambda x=body_part: self.menu_callback(x),
-                }
-            )
-        self.menu.open()
+    def update_statistics_graph(self, workouts):
+        if len(workouts) == 0:
+            return
 
-    def menu_callback(self, body_part, *args):
-        body_part_exercises = list(self.db.exercises.find({"bodyPart": body_part}))
-        screen_instance = self.manager.get_screen('body_part_exercise')
-        if screen_instance:
-            screen_instance.exercises = body_part_exercises
-        self.menu.dismiss()
-        self.manager.current = 'body_part_exercise'
+        date_volumes = defaultdict(float)  # Accumulate volumes for each date
 
-    def on_add_routine_button_press(self):
-        self.manager.current = 'main'
+        for workout in workouts:
+            for exercise in workout.exercises:
+                date = date2num(workout.date)
+                volume = sum(set_data['reps'] * set_data['weight'] for set_data in exercise['sets'])
+                date_volumes[date] += volume
 
+        dates, volumes = zip(*date_volumes.items())
 
-class MainScreen(MDScreen):
-    def __init__(self, db, **kwargs):
-        super().__init__(**kwargs)
-        self.db = db
-        self.user_id = 'nikimev01@gmail.com'
-        self.user_data = self.db.users.find_one({'email': self.user_id})
-        self.bind(on_enter=self.RoutineScreen)
+        xmin_number = min(dates).item()
+        xmax_number = max(dates).item()
+        tick = (xmax_number - xmin_number) / 4
+
+        graph = Graph(xlabel='Date', ylabel='Volume',
+                      x_ticks_major=tick, y_ticks_major=max(volumes) / 2,
+                      y_grid_label=True, padding=5,
+                      x_grid=True, xmin=xmin_number, xmax=xmax_number, ymin=0, ymax=max(volumes))
+
+        plot = MeshLinePlot(color=[1, 0, 0, 1])
+        plot.points = [(date, volume) for date, volume in zip(dates, volumes)]
+        graph.add_plot(plot)
+
+        self.ids.statistics.add_widget(graph)
+
+    def update_user_data(self, user):
+        self.user = user
+        print(f"User {user.name} successfully logged in.")
         self.exercises_dict = {}
-        self.load_user_exercises()
+        if not self.loaded:
+            self.load_user_exercises()
+            self.RoutineScreen()
+            self.PastWorkoutsScreen()
+            self.loaded = True
 
     def load_user_exercises(self):
-        user_routines = self.user_data['routines']
+        user_routines = self.user.routines
         for routine in user_routines:
-            for exercise in routine['exercises_in_routine']:
+            for exercise in routine.exercises_in_routine:
                 exercise_id = exercise['exercise_id']
                 self.exercises_dict[exercise_id] = self.db.exercises.find_one({'id': exercise_id})
+        for workout in self.user.workouts:
+            for exercise in workout.exercises:
+                exercise_id = exercise['exercise_id']
+                if exercise_id not in self.exercises_dict:
+                    self.exercises_dict[exercise_id] = self.db.exercises.find_one({'id': exercise_id})
 
     def on_add_routine_button_press(self):
+        self.manager.get_screen('edit_routine_screen').reset()
         self.manager.current = 'edit_routine_screen'
 
-    def RoutineScreen(self, *args):
-        if self.user_data:
-            self.ids.routine_scroll_view.clear_widgets()
-            user_routines = self.user_data.get('routines', [])
+    def create_routine_card(self, routine):
+        routine_layout = self.ids.routine_layout
+        routine_card = RoutineCard(routine=routine, exercises_dict=self.exercises_dict,
+                                   delete_callback=self.delete_routine_card, edit_button=self.edit_routine_card,
+                                   start_callback=self.start_workout, Window=Window)
+        routine_layout.add_widget(routine_card)
+
+    def start_workout(self, routine):
+        ws = self.manager.get_screen("workout_screen")
+        ws.exercise_dict = self.exercises_dict
+        ws.title = routine.name
+        ws.load_workout_exercises(routine)
+        self.manager.current = "workout_screen"
+
+    def add_routine_to_user(self, routine):
+        self.user.routines.append(routine)
+        self.load_user_exercises()
+        self.create_routine_card(routine)
+
+    def delete_routine_card(self, routine):
+        self.user.routines.remove(routine)
+
+        self.ids.routine_layout.clear_widgets()
+        for updated_routine in self.user.routines:
+            self.create_routine_card(updated_routine)
+
+        self.db.users.update_one({"email": self.user.email}, {"$pull": {"routines": {"name": routine.name}}})
+
+    def edit_routine_card(self, routine):
+        sc = self.manager.get_screen("edit_routine_screen")
+        exercise_list = []
+        for exercise in routine.exercises_in_routine:
+            a = self.exercises_dict[exercise["exercise_id"]]
+            a["sets"] = exercise['sets']
+            exercise_list.append(a)
+        sc.routine_to_edit = routine
+        sc.selected_exercises = exercise_list
+        sc.edit_state = True
+        sc.routine_name_textfield.text = routine.name
+        sc.manager.current = "edit_routine_screen"
+
+    def RoutineScreen(self):
+        if self.user:
+            routine_layout = self.ids.routine_layout
+            if routine_layout.children:
+                return
+            user_routines = self.user.routines
             self.routine_layout_width = Window.width - dp(40)
-            routine_layout = MDGridLayout(
-                size=(self.routine_layout_width, dp(340)),
-                cols=1,
-                spacing=dp(20),
-                padding=dp(20),
-                pos=(Window.width / 2 - self.routine_layout_width / 2, Window.height / 2 - dp(120)),
-            )
-            self.ids.routine_scroll_view.add_widget(routine_layout)
+
             for routine in user_routines:
-                routine_card = MDCard(size=(self.routine_layout_width * 0.7, dp(120)), elevation=3,
-                                      orientation='vertical', size_hint_y=None,
-                                      height=dp(120))
-                first_row_box = MDGridLayout(orientation='lr-tb', cols=2, spacing=dp(20), padding=dp(20),
-                                             size=(self.routine_layout_width * 0.7, dp(60)))
-                routine_card.add_widget(first_row_box)
-                first_row_box.add_widget(MDLabel(text=f"{routine['name']}"))
-                first_row_box.add_widget(MDRaisedButton(text="Start Routine", size_hint_x=None, width=dp(120)))
-                exercises_in_routine = routine['exercises_in_routine']
-                exercises_text = ''
-                for a in exercises_in_routine:
-                    exercise = self.exercises_dict[a['exercise_id']]
-                    exercises_text += exercise['name'] + ", "
-                exercises_text = exercises_text[:-2]
-                if len(exercises_text) > 65:
-                    exercises_text = exercises_text[:65] + ".."
-                routine_card.add_widget(MDLabel(text=exercises_text, padding=(dp(20), dp(0)), opacity=0.5,
-                                                size_hint_y=0.8,
-                                                text_size=(self.routine_layout_width * 0.7 - dp(40), None)))
-                routine_layout.add_widget(routine_card)
+                self.create_routine_card(routine)
+
         else:
             print("User data not found")
 
+    def add_user_workout_cards(self, workouts):
+        self.ids.workouts.clear_widgets()
+
+        for updated_workout in reversed(workouts):
+            self.ids.workouts.add_widget(UserWorkoutCard(updated_workout,
+                                                         self.exercises_dict,
+                                                         self.delete_workout_card))
+
+    def delete_workout_card(self, workout):
+        self.user.workouts.remove(workout)
+
+        self.add_user_workout_cards(self.user.workouts)
+
+        self.db.users.update_one({"email": self.user.email}, {"$pull": {"workouts": {"date": workout.date}}})
+        self.ids.statistics.clear_widgets()
+        self.update_statistics_graph(self.user.workouts)
+
+    def PastWorkoutsScreen(self):
+        self.update_statistics_graph(self.user.workouts)
+
+        self.ids.profile_name.text = self.user.name
+        self.add_user_workout_cards(self.user.workouts)
 
 class ProfileScreen(MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+
+class LoginScreen(MDScreen):
+    def __init__(self, db, main_screen, **kwargs):
+        super().__init__(**kwargs)
+        self.db = db
+        self.main_screen = main_screen
+        self.email_input = MDTextField(hint_text="Email", pos_hint={'center_x': 0.5, 'center_y': 0.7},
+                                       size_hint=(0.8, None), height=dp(40))
+        self.password_input = MDTextField(hint_text="Password", password=True,
+                                          pos_hint={'center_x': 0.5, 'center_y': 0.6},
+                                          size_hint=(0.8, None), height=dp(40))
+        self.login_button = MDRaisedButton(text="Login", pos_hint={'center_x': 0.5, 'center_y': 0.5},
+                                           on_release=self.on_login)
+        self.register_button = MDRaisedButton(text="Register", pos_hint={'center_x': 0.5, 'center_y': 0.4},
+                                              on_release=self.on_register_button)
+        self.add_widget(self.email_input)
+        self.add_widget(self.password_input)
+        self.add_widget(self.login_button)
+        self.add_widget(self.register_button)
+
+    def on_login(self, *args):
+        email = self.email_input.text
+        password = self.password_input.text
+
+        # change to variables
+        user_data = self.db.users.find_one({'email': email, 'password': password})
+
+        if user_data:
+            user = User.from_dict(user_data)
+
+            self.manager.get_screen("edit_routine_screen").user = user
+            self.manager.get_screen("workout_screen").user = user
+
+            self.main_screen.update_user_data(user)
+            self.manager.current = 'main'
+        else:
+            # Display an error message or handle unsuccessful login
+            print("Login failed. Invalid credentials.")
+
+    def on_register_button(self, *args):
+        # Switch to the register screen
+        self.manager.current = 'register'
+
+
+class RegisterScreen(MDScreen):
+    def __init__(self, db, main_screen, **kwargs):
+        super().__init__(**kwargs)
+        self.db = db
+        self.main_screen = main_screen
+        self.name_input = MDTextField(hint_text="Name", pos_hint={'center_x': 0.5, 'center_y': 0.8},
+                                      size_hint=(0.8, None), height=dp(40))
+        self.email_input = MDTextField(hint_text="Email", pos_hint={'center_x': 0.5, 'center_y': 0.7},
+                                       size_hint=(0.8, None), height=dp(40))
+        self.password_input = MDTextField(hint_text="Password", password=True,
+                                          pos_hint={'center_x': 0.5, 'center_y': 0.6},
+                                          size_hint=(0.8, None), height=dp(40))
+        self.register_button = MDRaisedButton(text="Register", pos_hint={'center_x': 0.5, 'center_y': 0.5},
+                                              on_release=self.on_register)
+        self.add_widget(self.name_input)
+        self.add_widget(self.email_input)
+        self.add_widget(self.password_input)
+        self.add_widget(self.register_button)
+
+    def on_register(self, *args):
+        name = self.name_input.text
+        email = self.email_input.text
+        password = self.password_input.text
+
+        # You might want to add more validation for the input fields
+
+        # Insert the new user into the database
+        user_data = {
+            'name': name,
+            'email': email,
+            'password': password,
+            'routines': [],
+            'workouts': []
+        }
+
+        # Insert the user into the database
+        result = self.db.users.insert_one(user_data)
+
+        if result.inserted_id:
+            # Registration successful, you can redirect to the login screen or main screen
+            self.manager.current = 'login'
+        else:
+            # Display an error message or handle unsuccessful registration
+            print("Registration failed.")
 
 
 class GymProApp(MDApp):
@@ -262,17 +273,25 @@ class GymProApp(MDApp):
         self.exercises = self.db.exercises.find()
 
     def build(self):
+        Builder.load_file("GymPro.kv")
         self.theme_cls.material_style = "M3"
         self.theme_cls.theme_style = "Dark"
+        main_screen = MainScreen(name='main', db=self.db, exercises=self.exercises)
+        # Create LoginScreen and pass the main_screen reference
+        login_screen = LoginScreen(name='login', db=self.db, main_screen=main_screen)
 
         screen_manager = ScreenManager()
-        screen_manager.add_widget(EditRoutineScreen(name='edit_routine_screen', db=self.db))
+        screen_manager.add_widget(login_screen)
+        screen_manager.add_widget(EditRoutineScreen(name='edit_routine_screen', db=self.db, Window=Window))
         screen_manager.add_widget(BodyPartExercisesScreen(name="body_part_exercise", exercises=self.exercises))
-        screen_manager.add_widget(MainScreen(name='main', db=self.db))
+        screen_manager.add_widget(main_screen)
+        screen_manager.add_widget(RegisterScreen(name='register', db=self.db, main_screen=main_screen))
+        screen_manager.add_widget(WorkoutScreen(name="workout_screen", db=self.db))
         screen_manager.add_widget(ExercisesScreen(name='exercise_screen', db=self.db))
 
         return screen_manager
 
 
+# Run the app
 if __name__ == '__main__':
     GymProApp().run()
