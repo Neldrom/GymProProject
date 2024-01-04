@@ -1,0 +1,16 @@
+# Kivy and KivyMD
+kivy==2.1.0
+kivymd==0.104.2
+
+# MongoDB driver
+pymongo==3.12.0
+
+# Timezone libraries
+pytz==2021.1
+tzlocal==3.0
+
+# Matplotlib
+matplotlib==3.4.3
+
+# Kivy Garden
+kivy-garden==0.1.4
