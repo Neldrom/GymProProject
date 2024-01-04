@@ -6,6 +6,25 @@ from kivymd.uix.label import MDLabel
 
 
 class RoutineCard(MDCard):
+    """
+    Custom card widget for displaying a workout routine.
+
+    Attributes:
+        size: The size of the card.
+        orientation: Vertical layout orientation.
+        size_hint_y: Specifies the height behavior relative to the parent.
+        height: The height of the card.
+        routine: The workout routine associated with the card.
+
+    Methods:
+        __init__(self, routine, exercises_dict, delete_callback=None, start_callback=None, edit_button=None, Window=None, **kwargs):
+            Initializes the RoutineCard with routine details and callbacks.
+            Constructs a vertical layout with two horizontal box layouts for displaying routine information.
+            Calculates and sets the size and dimensions based on the window width and density-independent pixels (dp).
+            Populates the card with routine name, start button, delete button, and a truncated list of exercises.
+            Executes the provided callbacks (start_callback, delete_callback, edit_button) when corresponding buttons are pressed.
+    """
+
     def __init__(self, routine, exercises_dict, delete_callback=None, start_callback=None, edit_button=None, Window=None, **kwargs):
         super().__init__(**kwargs)
         self.size = (Window.width - dp(40) * 0.7, dp(120))
@@ -68,4 +87,5 @@ class RoutineCard(MDCard):
             )
         )
         self.add_widget(second_row_box)
+
 

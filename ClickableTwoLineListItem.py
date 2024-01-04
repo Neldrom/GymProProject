@@ -3,7 +3,37 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics import Color, Line
 
 class ClickableTwoLineListItem(BoxLayout):
+    """
+    ClickableTwoLineListItem class represents a custom widget for displaying a two-line list item
+    with the ability to toggle selection.
+
+    Attributes:
+        exercise (dict): Information about the exercise to display.
+        index (int): Index of the item.
+        on_label_touch (function): Callback function for label touch event.
+        clicked (bool): Property to track whether the item is clicked.
+
+    Methods:
+        __init__(self, exercise, index, on_label_touch, **kwargs):
+            Initializes the ClickableTwoLineListItem.
+
+        on_label_touch_down(self, instance, touch):
+            Handles the touch down event on the label. Toggles the clicked state and notifies the callback.
+
+        draw_selection_line(self):
+            Draws a selection line on the widget based on its clicked state.
+    """
+
     def __init__(self, exercise, index, on_label_touch, **kwargs):
+        """
+        Initializes the ClickableTwoLineListItem.
+
+        Parameters:
+            exercise (dict): Information about the exercise to display.
+            index (int): Index of the item.
+            on_label_touch (function): Callback function for label touch event.
+            **kwargs: Additional keyword arguments for BoxLayout.
+        """
         super().__init__(orientation='horizontal', **kwargs)
         self.exercise = exercise
         self.index = index
@@ -19,6 +49,14 @@ class ClickableTwoLineListItem(BoxLayout):
         self.add_widget(label)
 
     def on_label_touch_down(self, instance, touch):
+        """
+        Handles the touch down event on the label.
+        Toggles the clicked state and notifies the callback.
+
+        Parameters:
+            instance: The Label instance.
+            touch: The touch event.
+        """
         if instance.collide_point(*touch.pos):
             self.clicked = not self.clicked  # Toggle the clicked state
             self.on_label_touch(self.exercise)  # Notify the callback
@@ -26,6 +64,9 @@ class ClickableTwoLineListItem(BoxLayout):
             return True
 
     def draw_selection_line(self):
+        """
+        Draws a selection line on the widget based on its clicked state.
+        """
         self.canvas.before.clear()  # Clear previous canvas instructions
 
         if self.clicked:

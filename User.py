@@ -1,7 +1,18 @@
 from pymongo import MongoClient
 
-
 class Routine:
+    """
+    Represents a workout routine.
+
+    Attributes:
+        name (str): The name of the routine.
+        exercises_in_routine (list): List of exercises in the routine, each represented as a dictionary with 'exercise_id' and 'sets'.
+
+    Methods:
+        to_dict(): Converts the routine object to a dictionary.
+        from_dict(routine_data): Creates a Routine object from a dictionary.
+    """
+
     def __init__(self, name, exercises_in_routine=None):
         self.name = name
         self.exercises_in_routine = exercises_in_routine or []
@@ -27,6 +38,20 @@ class Routine:
 
 
 class Workout:
+    """
+    Represents a user's workout session.
+
+    Attributes:
+        date (str): The date of the workout.
+        title (str): The title of the workout.
+        exercises (list): List of exercises in the workout, each represented as a dictionary with 'exercise_id' and 'sets'.
+
+    Methods:
+        add_exercise(exercise_id, sets): Adds a new exercise to the workout.
+        to_dict(): Converts the workout object to a dictionary.
+        from_dict(workout_data): Creates a Workout object from a dictionary.
+    """
+
     def __init__(self, date, title, exercises=None):
         self.date = date
         self.title = title
@@ -58,6 +83,25 @@ class Workout:
 
 
 class User:
+    """
+    Represents a user with routines and workout history.
+
+    Attributes:
+        name (str): The name of the user.
+        email (str): The email address of the user.
+        password (str): The password of the user.
+        routines (list): List of Routine objects.
+        workouts (list): List of Workout objects.
+
+    Methods:
+        add_routine(routine): Adds a routine to the user's list.
+        add_workout(workout): Adds a workout to the user's list.
+        get_exercise_history(exercise_id): Returns the workout history for a specific exercise.
+        get_all_exercise_details(): Retrieves details for all exercises in user's workouts.
+        to_dict(): Converts the user object to a dictionary.
+        from_dict(data): Creates a User object from a dictionary.
+    """
+
     def __init__(self, name, email, password, routines=None, workouts=None):
         self.name = name
         self.email = email
@@ -82,7 +126,8 @@ class User:
 
     def get_all_exercise_details(self):
         client = MongoClient(
-            "mongodb+srv://dron:gotinpich09@cluster0.re9rrdw.mongodb.net/fitnessAppUsers?retryWrites=true&w=majority/")
+            "mongodb+srv://dron:gotinpich09@cluster0.re9rrdw.mongodb.net/fitnessAppUsers?retryWrites=true&w=majority/"
+        )
         db = client["fitnessAppUsers"]
         exercise_ids = []
         for workout in self.workouts:

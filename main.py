@@ -1,22 +1,14 @@
 from collections import defaultdict
-from datetime import datetime as dt
-from math import sin
-from statistics import mean
-
-import matplotlib
-import numpy as np
 from kivy.lang import Builder
-from kivy.properties import ObjectProperty
-from kivy_garden.graph import Graph, MeshLinePlot
-from kivymd.uix.boxlayout import MDBoxLayout
 
+# Custom Screen Modules
 from GymProProject.BodyPartExercisesScreen import BodyPartExercisesScreen
 from GymProProject.EditRoutineScreen import EditRoutineScreen
 from GymProProject.ExercisesScreen import ExercisesScreen
 from GymProProject.RoutineCard import RoutineCard
 from GymProProject.UserWorkoutCard import UserWorkoutCard
 from GymProProject.WorkoutScreen import WorkoutScreen
-from User import *
+from User import *  # Assuming this module contains the User class
 from kivy.metrics import dp
 from kivymd.uix.screenmanager import ScreenManager
 from kivymd.uix.screen import MDScreen
@@ -32,6 +24,7 @@ Window.size = 360, 640
 
 
 class MainScreen(MDScreen):
+    """Main interface managing routines and workouts."""
     def __init__(self, db, exercises, **kwargs):
         super().__init__(**kwargs)
         self.exercises = exercises
@@ -40,6 +33,7 @@ class MainScreen(MDScreen):
         self.loaded = False
 
     def update_statistics_graph(self, workouts):
+        # Function to update the workout statistics graph based on user workouts.
         if len(workouts) == 0:
             return
 
@@ -69,6 +63,7 @@ class MainScreen(MDScreen):
         self.ids.statistics.add_widget(graph)
 
     def update_user_data(self, user):
+        # Update user data and load user exercises, routines, and past workouts.
         self.user = user
         print(f"User {user.name} successfully logged in.")
         self.exercises_dict = {}
@@ -79,6 +74,7 @@ class MainScreen(MDScreen):
             self.loaded = True
 
     def load_user_exercises(self):
+        # Load user exercises from routines and past workouts.
         user_routines = self.user.routines
         for routine in user_routines:
             for exercise in routine.exercises_in_routine:
@@ -91,10 +87,12 @@ class MainScreen(MDScreen):
                     self.exercises_dict[exercise_id] = self.db.exercises.find_one({'id': exercise_id})
 
     def on_add_routine_button_press(self):
+        # Event handler for adding a new routine.
         self.manager.get_screen('edit_routine_screen').reset()
         self.manager.current = 'edit_routine_screen'
 
     def create_routine_card(self, routine):
+        # Create a routine card widget and add it to the layout.
         routine_layout = self.ids.routine_layout
         routine_card = RoutineCard(routine=routine, exercises_dict=self.exercises_dict,
                                    delete_callback=self.delete_routine_card, edit_button=self.edit_routine_card,
@@ -102,6 +100,7 @@ class MainScreen(MDScreen):
         routine_layout.add_widget(routine_card)
 
     def start_workout(self, routine):
+        # Start a workout for the selected routine.
         ws = self.manager.get_screen("workout_screen")
         ws.exercise_dict = self.exercises_dict
         ws.title = routine.name
@@ -109,11 +108,13 @@ class MainScreen(MDScreen):
         self.manager.current = "workout_screen"
 
     def add_routine_to_user(self, routine):
+        # Add a routine to the user's profile.
         self.user.routines.append(routine)
         self.load_user_exercises()
         self.create_routine_card(routine)
 
     def delete_routine_card(self, routine):
+        # Delete a routine card and update the user profile.
         self.user.routines.remove(routine)
 
         self.ids.routine_layout.clear_widgets()
@@ -123,6 +124,7 @@ class MainScreen(MDScreen):
         self.db.users.update_one({"email": self.user.email}, {"$pull": {"routines": {"name": routine.name}}})
 
     def edit_routine_card(self, routine):
+        # Edit a routine card.
         sc = self.manager.get_screen("edit_routine_screen")
         exercise_list = []
         for exercise in routine.exercises_in_routine:
@@ -136,6 +138,7 @@ class MainScreen(MDScreen):
         sc.manager.current = "edit_routine_screen"
 
     def RoutineScreen(self):
+        # Display user routines on the main screen.
         if self.user:
             routine_layout = self.ids.routine_layout
             if routine_layout.children:
@@ -150,6 +153,7 @@ class MainScreen(MDScreen):
             print("User data not found")
 
     def add_user_workout_cards(self, workouts):
+        # Add user workout cards to the main screen.
         self.ids.workouts.clear_widgets()
 
         for updated_workout in reversed(workouts):
@@ -158,6 +162,7 @@ class MainScreen(MDScreen):
                                                          self.delete_workout_card))
 
     def delete_workout_card(self, workout):
+        # Delete a user workout card.
         self.user.workouts.remove(workout)
 
         self.add_user_workout_cards(self.user.workouts)
@@ -167,17 +172,15 @@ class MainScreen(MDScreen):
         self.update_statistics_graph(self.user.workouts)
 
     def PastWorkoutsScreen(self):
+        # Display past workouts and workout statistics on the main screen.
         self.update_statistics_graph(self.user.workouts)
 
         self.ids.profile_name.text = self.user.name
         self.add_user_workout_cards(self.user.workouts)
 
-class ProfileScreen(MDScreen):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
 
 class LoginScreen(MDScreen):
+    """Handles user login with email and password."""
     def __init__(self, db, main_screen, **kwargs):
         super().__init__(**kwargs)
         self.db = db
@@ -197,10 +200,10 @@ class LoginScreen(MDScreen):
         self.add_widget(self.register_button)
 
     def on_login(self, *args):
+        # Event handler for the login button press.
         email = self.email_input.text
         password = self.password_input.text
 
-        # change to variables
         user_data = self.db.users.find_one({'email': email, 'password': password})
 
         if user_data:
@@ -212,15 +215,15 @@ class LoginScreen(MDScreen):
             self.main_screen.update_user_data(user)
             self.manager.current = 'main'
         else:
-            # Display an error message or handle unsuccessful login
             print("Login failed. Invalid credentials.")
 
     def on_register_button(self, *args):
-        # Switch to the register screen
+        # Switch to the register screen.
         self.manager.current = 'register'
 
 
 class RegisterScreen(MDScreen):
+    """Handles user registration with name, email, and password."""
     def __init__(self, db, main_screen, **kwargs):
         super().__init__(**kwargs)
         self.db = db
@@ -240,13 +243,11 @@ class RegisterScreen(MDScreen):
         self.add_widget(self.register_button)
 
     def on_register(self, *args):
+        # Event handler for the register button press.
         name = self.name_input.text
         email = self.email_input.text
         password = self.password_input.text
 
-        # You might want to add more validation for the input fields
-
-        # Insert the new user into the database
         user_data = {
             'name': name,
             'email': email,
@@ -255,29 +256,27 @@ class RegisterScreen(MDScreen):
             'workouts': []
         }
 
-        # Insert the user into the database
         result = self.db.users.insert_one(user_data)
 
         if result.inserted_id:
-            # Registration successful, you can redirect to the login screen or main screen
             self.manager.current = 'login'
         else:
-            # Display an error message or handle unsuccessful registration
             print("Registration failed.")
 
 
 class GymProApp(MDApp):
+    """Main application class."""
     def __init__(self):
         super().__init__()
         self.db = get_database()
         self.exercises = self.db.exercises.find()
 
     def build(self):
+        # Build the application and set up screens.
         Builder.load_file("GymPro.kv")
         self.theme_cls.material_style = "M3"
         self.theme_cls.theme_style = "Dark"
         main_screen = MainScreen(name='main', db=self.db, exercises=self.exercises)
-        # Create LoginScreen and pass the main_screen reference
         login_screen = LoginScreen(name='login', db=self.db, main_screen=main_screen)
 
         screen_manager = ScreenManager()

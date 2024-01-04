@@ -3,7 +3,7 @@ from kivy.uix.popup import Popup
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDRaisedButton
 from kivymd.uix.card import MDCard
-from kivymd.uix.label import MDLabel
+from kivymd.uix.label import MDLabel, MDIcon
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.textfield import MDTextField
 from kivy.uix.checkbox import CheckBox
@@ -14,10 +14,32 @@ from GymProProject.UserWorkoutCard import UserWorkoutCard
 
 
 class WorkoutScreen(MDScreen):
+    """
+    Represents the screen for performing workouts and saving workout data.
+
+    Attributes:
+        volume_label_value (NumericProperty): Numeric property for volume label value.
+        sets_label_value (NumericProperty): Numeric property for sets label value.
+
+    Methods:
+        __init__(db, **kwargs): Initializes a WorkoutScreen instance.
+        load_workout_exercises(routine): Loads exercises for the given routine.
+        end_workout(): Handles the end of the workout and saves workout data.
+        back_button(): Navigates back to the main screen.
+        reset(): Resets the volume and sets labels to zero.
+    """
+
     volume_label_value = NumericProperty("0")
     sets_label_value = NumericProperty("0")
 
     def __init__(self, db, **kwargs):
+        """
+        Initializes a WorkoutScreen instance.
+
+        Parameters:
+            db: Database reference.
+            **kwargs: Additional keyword arguments for MDScreen.
+        """
         super().__init__(**kwargs)
         self.user = None
         self.exercise_dict = None
@@ -31,6 +53,12 @@ class WorkoutScreen(MDScreen):
         self.ids.workout_current_info.add_widget(self.sets_label)
 
     def load_workout_exercises(self, routine):
+        """
+        Loads exercises for the given routine.
+
+        Parameters:
+            routine: Routine instance.
+        """
         self.ids.top_bar.title = self.title
         self.ids.exercises_box.clear_widgets()
         for e in routine.exercises_in_routine:
@@ -38,10 +66,10 @@ class WorkoutScreen(MDScreen):
             self.ids.exercises_box.add_widget(workout_card)
 
     def end_workout(self):
-        # Get the current UTC time
+        """
+        Handles the end of the workout and saves workout data.
+        """
         current_utc_time = datetime.utcnow()
-
-        # Create a Workout instance with the rounded time
         workout = Workout(date=current_utc_time, title=self.title)
 
         for child in self.ids.exercises_box.children:
@@ -68,10 +96,16 @@ class WorkoutScreen(MDScreen):
         self.manager.current = "main"
 
     def back_button(self):
+        """
+        Navigates back to the main screen.
+        """
         self.reset()
         self.manager.current = 'main'
 
     def reset(self):
+        """
+        Resets the volume and sets labels to zero.
+        """
         self.volume_label_value = 0
         self.sets_label_value = 0
         self.volume_label.text = f"Volume: {self.volume_label_value}"
@@ -79,7 +113,31 @@ class WorkoutScreen(MDScreen):
 
 
 class WorkoutExerciseCard(MDCard):
+    """
+    Represents a card for a specific exercise in a workout.
+
+    Attributes:
+        ws (WorkoutScreen): Reference to the parent WorkoutScreen.
+        exercise_info (dict): Exercise information.
+        **kwargs: Additional keyword arguments for MDCard.
+
+    Methods:
+        __init__(exercise, exercise_info, screen_ref, **kwargs): Initializes a WorkoutExerciseCard instance.
+        open_exercise(exercise, button_instance): Opens the exercise screen.
+        get_exercise_data(): Retrieves exercise data from the card.
+        checkbox_callback(checkbox, value): Callback method for the checkbox state change.
+    """
+
     def __init__(self, exercise, exercise_info, screen_ref, **kwargs):
+        """
+        Initializes a WorkoutExerciseCard instance.
+
+        Parameters:
+            exercise (dict): Exercise details.
+            exercise_info (dict): Exercise information.
+            screen_ref (WorkoutScreen): Reference to the parent WorkoutScreen.
+            **kwargs: Additional keyword arguments for MDCard.
+        """
         super().__init__(**kwargs)
         self.ws = screen_ref
         self.orientation = 'vertical'
@@ -97,9 +155,9 @@ class WorkoutExerciseCard(MDCard):
         info_button = MDRaisedButton(
             text="Info",
             size_hint_y=None,
-            height="55dp",  # Set the same height as the label
-            theme_text_color="Custom",  # Use custom text color to prevent color overlap
-            text_color=(1, 1, 1, 1),  # Set the text color for the button
+            height="55dp",
+            theme_text_color="Custom",
+            text_color=(1, 1, 1, 1),
             on_release=partial(self.open_exercise, exercise_info),
         )
         info_button.pos_hint = {"center_y": 0.5}
@@ -108,10 +166,9 @@ class WorkoutExerciseCard(MDCard):
 
         header_box = MDBoxLayout(orientation="horizontal", size_hint_y=None, height=header_height)
         header_box.add_widget(MDLabel(text="Set", halign="center"))
-        header_box.add_widget(MDLabel(text="Previous", halign="center"))
         header_box.add_widget(MDLabel(text="kg", halign="center"))
         header_box.add_widget(MDLabel(text="Reps", halign="center"))
-        header_box.add_widget(MDLabel(text="Y", halign="center"))
+        header_box.add_widget(MDLabel(text="Check", halign="center"))
         self.add_widget(header_box)
 
         self.set_box = MDBoxLayout(orientation="vertical", id="set_box")
@@ -119,7 +176,6 @@ class WorkoutExerciseCard(MDCard):
 
         for i in range(int(exercise["sets"])):
             row = MDBoxLayout(orientation="horizontal", size_hint_y=None, height=row_height)
-            row.add_widget(MDLabel(text=str(i + 1), halign="center"))
             row.add_widget(MDLabel(text=str(i + 1), halign="center"))
             md_textfield1 = MDTextField(halign="center", mode="round",
                                         input_filter="float", text="0")
@@ -133,17 +189,29 @@ class WorkoutExerciseCard(MDCard):
             self.set_box.add_widget(row)
 
     def open_exercise(self, exercise, button_instance):
+        """
+        Opens the exercise screen.
+
+        Parameters:
+            exercise: Exercise details.
+            button_instance: Button instance triggering the event.
+        """
         screen = self.ws.manager.get_screen("exercise_screen")
         screen.exercise = exercise
         screen.last_screen = "workout_screen"
         self.ws.manager.current = "exercise_screen"
 
     def get_exercise_data(self):
+        """
+        Retrieves exercise data from the card.
+
+        Returns:
+            dict: Exercise data.
+        """
         exercise_data = {
             "sets": []
         }
 
-        # Iterate through each child in the set_box
         for child in self.set_box.children:
             if isinstance(child, MDBoxLayout):
                 try:
@@ -163,6 +231,13 @@ class WorkoutExerciseCard(MDCard):
         return exercise_data
 
     def checkbox_callback(self, checkbox, value):
+        """
+        Callback method for the checkbox state change.
+
+        Parameters:
+            checkbox: Checkbox widget.
+            value: New state of the checkbox (True if checked, False if unchecked).
+        """
         row = checkbox.parent
         volume = float(row.children[1].text) * float(row.children[2].text)
         if value:

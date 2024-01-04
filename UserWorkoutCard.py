@@ -9,15 +9,36 @@ from kivymd.uix.label import MDLabel
 from tzlocal import get_localzone
 
 
-
 class UserWorkoutCard(MDCard):
+    """
+    Represents a card displaying information about a user's workout.
+
+    Attributes:
+        workout (Workout): The workout object containing details.
+        exercise_dict (dict): Dictionary containing exercise details.
+        delete_callback (function): Callback function to delete the workout.
+
+    Methods:
+        __init__(workout, exercise_dict, delete_callback, **kwargs): Initializes the UserWorkoutCard instance.
+    """
+
     def __init__(self, workout, exercise_dict, delete_callback, **kwargs):
+        """
+        Initializes a UserWorkoutCard.
+
+        Parameters:
+            workout (Workout): The workout object containing details.
+            exercise_dict (dict): Dictionary containing exercise details.
+            delete_callback (function): Callback function to delete the workout.
+            **kwargs: Additional keyword arguments for MDCard.
+        """
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.size_hint_y = None
         self.workout = workout
         local_timezone = get_localzone()
         local_date = workout.date.replace(tzinfo=pytz.UTC).astimezone(local_timezone)
+
         # First Row - Date
         first_row_box = MDBoxLayout(orientation="horizontal", padding=10)
         first_row_box.add_widget(
@@ -29,6 +50,7 @@ class UserWorkoutCard(MDCard):
             on_release=lambda x: delete_callback(self.workout),
         )
         first_row_box.add_widget(delete_button)
+
         # Second Row - Volume and Sets
         second_row_box = MDBoxLayout(orientation="horizontal", padding=10)
 
@@ -41,6 +63,8 @@ class UserWorkoutCard(MDCard):
         volume = 0
         sets = 0
         ex_height = 0
+
+        # Loop through exercises in the workout
         for e in workout.exercises:
             exercise = exercise_dict[e["exercise_id"]]
             exercise_label = MDLabel(text=f"{exercise['name'].title()}", theme_text_color="Primary", font_style="H6")
@@ -48,14 +72,17 @@ class UserWorkoutCard(MDCard):
             set_info_layout = MDBoxLayout(orientation="vertical")
             set_info_layout.add_widget(exercise_label)
             set_height = dp(30)
+
+            # Loop through sets in each exercise
             for set_data in e['sets']:
                 reps = set_data["reps"]
                 weight = set_data["weight"]
                 set_info = MDLabel(text=f"Reps: {reps}, Weight: {weight}", theme_text_color="Secondary")
                 set_info_layout.add_widget(set_info)
-                volume += weight*reps
+                volume += weight * reps
                 sets += 1
                 set_height += dp(30)
+
             set_info_layout.height = set_height
             ex_height += set_height
             exercises_layout.add_widget(set_info_layout)

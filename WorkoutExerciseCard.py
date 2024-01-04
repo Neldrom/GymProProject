@@ -6,8 +6,30 @@ from kivymd.uix.selectioncontrol import MDCheckbox
 from kivymd.uix.textfield import MDTextField
 from kivy.uix.checkbox import CheckBox
 
+
 class WorkoutExerciseCard(MDCard):
+    """
+    Represents a card for a specific exercise in a workout.
+
+    Attributes:
+        ws (WorkoutScreen): Reference to the parent WorkoutScreen.
+        exercise (dict): Exercise details.
+        **kwargs: Additional keyword arguments for MDCard.
+
+    Methods:
+        __init__(exercise, screen_ref, **kwargs): Initializes the WorkoutExerciseCard instance.
+        checkbox_callback(checkbox, value): Callback method for the checkbox state change.
+    """
+
     def __init__(self, exercise, screen_ref, **kwargs):
+        """
+        Initializes a WorkoutExerciseCard.
+
+        Parameters:
+            exercise (dict): Exercise details.
+            screen_ref (WorkoutScreen): Reference to the parent WorkoutScreen.
+            **kwargs: Additional keyword arguments for MDCard.
+        """
         super().__init__(**kwargs)
         self.ws = screen_ref
         self.orientation = 'vertical'
@@ -19,7 +41,6 @@ class WorkoutExerciseCard(MDCard):
 
         header_box = MDBoxLayout(orientation="horizontal", size_hint_y=None, height=header_height)
         header_box.add_widget(MDLabel(text="Set", halign="center"))
-        header_box.add_widget(MDLabel(text="Previous", halign="center"))
         header_box.add_widget(MDLabel(text="kg", halign="center"))
         header_box.add_widget(MDLabel(text="Reps", halign="center"))
         header_box.add_widget(MDLabel(text="Y", halign="center"))
@@ -31,7 +52,6 @@ class WorkoutExerciseCard(MDCard):
         for i in range(int(exercise["sets"])):
             print(exercise["sets"])
             row = MDBoxLayout(orientation="horizontal", size_hint_y=None, height=row_height)
-            row.add_widget(MDLabel(text=str(i + 1), halign="center"))
             row.add_widget(MDLabel(text=str(i + 1), halign="center"))
             md_textfield1 = MDTextField(halign="center", mode="round",
                                         input_filter="float", text="0")
@@ -45,6 +65,13 @@ class WorkoutExerciseCard(MDCard):
             set_box.add_widget(row)
 
     def checkbox_callback(self, checkbox, value):
+        """
+        Callback method for the checkbox state change.
+
+        Parameters:
+            checkbox: The checkbox widget.
+            value: The new state of the checkbox (True if checked, False if unchecked).
+        """
         row = checkbox.parent
         volume = float(row.children[1].text) * float(row.children[2].text)
         if value:
