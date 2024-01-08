@@ -3,9 +3,9 @@ from kivymd.uix.button import MDRaisedButton
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.textfield import MDTextField
-
 from GymProProject.ExerciseCard import ExerciseCard
 from GymProProject.User import Routine
+from kivy.cache import Cache
 
 
 class EditRoutineScreen(MDScreen):
@@ -48,21 +48,13 @@ class EditRoutineScreen(MDScreen):
     """
 
     def __init__(self, db, Window=None, **kwargs):
-        """
-        Initializes the EditRoutineScreen.
-
-        Parameters:
-            db: Database instance.
-            Window: Kivy Window instance.
-            **kwargs: Additional keyword arguments for MDScreen.
-        """
         super().__init__(**kwargs)
         self.edit_state = False
         self.routine_to_edit = False
         self.selected_exercises = []
         self.ids.exercises_box.pos = (0, Window.height - dp(100))
         self.db = db
-        self.exercises = db.exercises.find()
+        self.exercises = list(db.exercises.find())
         self.body_parts = self.db.exercises.distinct("bodyPart")
         self.routine_name_textfield = MDTextField(
             text="",
@@ -75,10 +67,6 @@ class EditRoutineScreen(MDScreen):
         self.ids.flayout.add_widget(self.routine_name_textfield)
 
     def on_pre_enter(self, *args):
-        """
-        Method called before entering the screen.
-        Updates the displayed exercises and buttons.
-        """
         self.ids.exercises_box.clear_widgets()
         if self.selected_exercises:
             for exercise_info in self.selected_exercises:
@@ -95,20 +83,10 @@ class EditRoutineScreen(MDScreen):
         self.ids.exercises_box.add_widget(self.add_button)
 
     def delete_exercise(self, exercise, card):
-        """
-        Deletes the selected exercise from the routine.
-
-        Parameters:
-            exercise: Exercise to delete.
-            card: ExerciseCard associated with the exercise.
-        """
         self.selected_exercises.remove(exercise)
         self.ids.exercises_box.remove_widget(card)
 
     def show_body_part_selection(self, *args):
-        """
-        Shows a dropdown menu for selecting exercises based on body parts.
-        """
         self.menu = MDDropdownMenu(
             caller=self.add_button,
             width_mult=4,
@@ -125,19 +103,16 @@ class EditRoutineScreen(MDScreen):
         self.menu.open()
 
     def menu_callback(self, body_part, *args):
-        """
-        Callback function for the dropdown menu. Loads exercises based on the selected body part.
-
-        Parameters:
-            body_part: Selected body part.
-            *args: Additional arguments (not used).
-        """
-        body_part_exercises = list(self.db.exercises.find({"bodyPart": body_part}))
+        body_part_exercises = []
+        for exercise in self.exercises:
+            if exercise["bodyPart"] == body_part:
+                body_part_exercises.append(exercise)
         screen_instance = self.manager.get_screen('body_part_exercise')
         if screen_instance:
             screen_instance.exercises = body_part_exercises
-        self.menu.dismiss()
-        self.manager.current = 'body_part_exercise'
+            screen_instance.ids.top_bar.title = body_part.title()
+            self.manager.current = 'body_part_exercise'
+            self.menu.dismiss()
 
     def back_button(self):
         """
@@ -163,9 +138,6 @@ class EditRoutineScreen(MDScreen):
         if self.edit_state:
             m.delete_routine_card(self.routine_to_edit)
             self.edit_state = False
-        m.db.users.update_one({"email": m.user.email},
-                              {"$push": {"routines": routine.to_dict()}})
-        m.load_user_exercises()
         m.add_routine_to_user(routine)
         self.reset()
         self.manager.current = 'main'

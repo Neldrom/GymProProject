@@ -11,7 +11,7 @@ def get_database():
         Database: MongoDB database instance.
     """
     # Provide the MongoDB Atlas URL to connect Python to MongoDB using pymongo
-    CONNECTION_STRING = "mongodb+srv://dron:gotinpich09@cluster0.re9rrdw.mongodb.net/fitnessAppUsers?retryWrites=true&w=majority"
+    CONNECTION_STRING = "mongodb+srv://dron:12345@cluster0.re9rrdw.mongodb.net/fitnessAppUsers?retryWrites=true&w=majority"
 
     # Create a connection using MongoClient. You can import MongoClient or use pymongo.MongoClient
     client = pymongo.MongoClient(CONNECTION_STRING, tlsCAFile=certifi.where())

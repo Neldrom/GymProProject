@@ -78,19 +78,14 @@ class WorkoutScreen(MDScreen):
                 if len(exercise_data["sets"]) > 1:
                     workout.add_exercise(child.exercise_info["id"], exercise_data["sets"])
 
-        workout_data = workout.to_dict()
-        self.db.users.update_one(
-            {"email": self.user.email},
-            {"$push": {"workouts": workout_data}}
-        )
-
         popup = Popup(title='Workout Saved',
                       content=MDLabel(text='Workout data has been saved.'),
                       size_hint=(None, None), size=(400, 200))
         popup.open()
         m = self.manager.get_screen('main')
-        m.ids.statistics.clear_widgets()
-        m.user.workouts.append(workout)
+        m.ids.statistics1.clear_widgets()
+        m.ids.statistics2.clear_widgets()
+        m.user.add_workout(workout)
         m.add_user_workout_cards(m.user.workouts)
         m.update_statistics_graph(self.user.workouts)
         self.manager.current = "main"
@@ -119,7 +114,6 @@ class WorkoutExerciseCard(MDCard):
     Attributes:
         ws (WorkoutScreen): Reference to the parent WorkoutScreen.
         exercise_info (dict): Exercise information.
-        **kwargs: Additional keyword arguments for MDCard.
 
     Methods:
         __init__(exercise, exercise_info, screen_ref, **kwargs): Initializes a WorkoutExerciseCard instance.
@@ -144,6 +138,14 @@ class WorkoutExerciseCard(MDCard):
         self.size_hint_y = None
         self.exercise_info = exercise_info
 
+        history = screen_ref.user.get_exercise_history(exercise_info['id'])
+        sorted_history = sorted(history, key=lambda x: x['date'], reverse=True)
+        latest_entries = []
+        for entry in sorted_history:
+            sets = entry['sets']
+            for s in sets:
+                set_data = {'reps': s['weight'], 'weight': s['reps']}
+                latest_entries.append(set_data)
         row_height = dp(40)
         header_height = dp(40)
         sets_height = int(exercise["sets"]) * row_height
@@ -166,6 +168,7 @@ class WorkoutExerciseCard(MDCard):
 
         header_box = MDBoxLayout(orientation="horizontal", size_hint_y=None, height=header_height)
         header_box.add_widget(MDLabel(text="Set", halign="center"))
+        header_box.add_widget(MDLabel(text="Previous", halign="center"))
         header_box.add_widget(MDLabel(text="kg", halign="center"))
         header_box.add_widget(MDLabel(text="Reps", halign="center"))
         header_box.add_widget(MDLabel(text="Check", halign="center"))
@@ -177,6 +180,10 @@ class WorkoutExerciseCard(MDCard):
         for i in range(int(exercise["sets"])):
             row = MDBoxLayout(orientation="horizontal", size_hint_y=None, height=row_height)
             row.add_widget(MDLabel(text=str(i + 1), halign="center"))
+            if i < len(latest_entries) - 1:
+                row.add_widget(MDLabel(text=f"{latest_entries[i]['reps']}x{latest_entries[i]['weight']}"))
+            else:
+                row.add_widget(MDLabel(text="-", halign="center"))
             md_textfield1 = MDTextField(halign="center", mode="round",
                                         input_filter="float", text="0")
             md_textfield2 = MDTextField(halign="center", mode="round",
@@ -189,25 +196,12 @@ class WorkoutExerciseCard(MDCard):
             self.set_box.add_widget(row)
 
     def open_exercise(self, exercise, button_instance):
-        """
-        Opens the exercise screen.
-
-        Parameters:
-            exercise: Exercise details.
-            button_instance: Button instance triggering the event.
-        """
         screen = self.ws.manager.get_screen("exercise_screen")
         screen.exercise = exercise
         screen.last_screen = "workout_screen"
         self.ws.manager.current = "exercise_screen"
 
     def get_exercise_data(self):
-        """
-        Retrieves exercise data from the card.
-
-        Returns:
-            dict: Exercise data.
-        """
         exercise_data = {
             "sets": []
         }

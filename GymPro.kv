@@ -6,7 +6,7 @@
         MDBottomNavigationItem:
             name: 'screen 1'
             text: 'Workout'
-            icon: 'workout.png'
+            icon: 'dumbbell'
             on_tab_touch_down: root.RoutineScreen()
 
             MDFloatLayout:
@@ -43,41 +43,59 @@
 
         MDBottomNavigationItem:
             name: 'screen 2'
+            text: 'History'
+            icon: 'history'
+
+            MDFloatLayout:
+                MDScrollView:
+                    size: self.size
+                    id: routine_scroll_view
+                    always_overscroll: True
+                    do_scroll_y: True
+                    do_scroll_x: False
+                    pos_hint: {"top": 1, "center_x": .5}
+                    MDBoxLayout:
+                        id: workouts
+                        orientation: "vertical"
+                        padding: 10
+                        spacing: 10
+                        adaptive_height: True
+
+
+        MDBottomNavigationItem:
+            name: 'screen 3'
             text: 'Profile'
-            icon: 'profile.png'
+            icon: 'face-man-profile'
 
             MDFloatLayout:
                 MDLabel:
                     text: 'name'
                     halign: "center"
                     id: profile_name
-                    pos_hint: {"center_y": .9, "center_x": .5}
-                MDBoxLayout:
-                    id: statistics
-                    size_hint_y: 0.4
-                    size_hint_x: 0.8
-                    pos_hint: {"center_x": .5}
-                MDScrollView:
-                    size: self.size
-                    size_hint_y: 0.4
-                    id: routine_scroll_view
-                    always_overscroll: True
-                    do_scroll_y: True
-                    do_scroll_x: False
-                    pos_hint: {"top": .8, "center_x": .5}
-                    MDBoxLayout:
-                        id: workouts
-                        orientation: "vertical"
-                        padding: 10
-                        spacing: 10
+                    pos_hint: {"center_y": .85, "center_x": .5}
+                MDRaisedButton:
+                    text: "Edit Profile"
+                    pos_hint: {"center_y": .7, "center_x": .5}
+                    on_press: root.edit_profile()
+                MDSwiper:
+                    id: swiper
+                    size_hint_y: 1
+                    pos_hint: {"center_y": .4, "center_x": .5}
+                    MDSwiperItem:
+                        MDBoxLayout:
+                            id: statistics1
+                    MDSwiperItem:
+                        MDBoxLayout:
+                            id: statistics2
 
-                        size_hint_y: None
-                        height: self.minimum_height
+
+
 
 <EditRoutineScreen>
     MDBoxLayout:
         orientation: "vertical"
         MDTopAppBar:
+            title: "Edit Routine"
             left_action_items: [['menu-left', lambda x: root.back_button()]]
 
         MDFloatLayout:
@@ -109,6 +127,7 @@
 
 <BodyPartExercisesScreen>
     MDTopAppBar:
+        id: top_bar
         pos_hint: {"top": 1}
         left_action_items: [['menu-left', lambda x: root.back_button()]]
 
@@ -194,3 +213,9 @@
             pos_hint: {"center_x": .5, "center_y": .05}
             on_release: root.end_workout()
 
+# Inside MDFloatLayout (child of MDDialog) in your GymPro.kv file
+<Content>:
+    orientation: "vertical"
+    spacing: "12dp"
+    size_hint_y: None
+    height: "180dp"

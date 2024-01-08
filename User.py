@@ -1,5 +1,8 @@
 from pymongo import MongoClient
 
+from GymProProject.pymongo_get_database import get_database
+
+
 class Routine:
     """
     Represents a workout routine.
@@ -95,9 +98,14 @@ class User:
 
     Methods:
         add_routine(routine): Adds a routine to the user's list.
+        remove_routine(routine): Removes a routine from the user's list.
+        update_name(new_name): Updates the user's name.
+        update_email(new_email): Updates the user's email.
+        update_password(new_password): Updates the user's password.
         add_workout(workout): Adds a workout to the user's list.
+        remove_workout(workout): Removes a workout from the user's list.
         get_exercise_history(exercise_id): Returns the workout history for a specific exercise.
-        get_all_exercise_details(): Retrieves details for all exercises in user's workouts.
+        get_all_exercise_details(): Retrieves details for all exercises in the user's workouts.
         to_dict(): Converts the user object to a dictionary.
         from_dict(data): Creates a User object from a dictionary.
     """
@@ -108,12 +116,41 @@ class User:
         self.password = password
         self.routines = routines or []
         self.workouts = workouts or []
+        self.db = get_database()
 
     def add_routine(self, routine):
         self.routines.append(routine)
+        self.db.users.update_one({"email": self.email},
+                                 {"$push": {"routines": routine.to_dict()}})
+
+    def remove_routine(self, routine):
+        self.routines.remove(routine)
+        self.db.users.update_one({"email": self.email},
+                                 {"$pull": {"routines": {"name": routine.name}}})
+
+    def update_name(self, new_name):
+        self.name = new_name
+        self.db.users.update_one({"email": self.email}, {"$set": {"name": new_name}})
+
+    def update_email(self, new_email):
+        self.db.users.update_one({"email": self.email}, {"$set": {"email": new_email}})
+        self.email = new_email
+
+    def update_password(self, new_password):
+        self.password = new_password
+        self.db.users.update_one({"email": self.email}, {"$set": {"password": new_password}})
 
     def add_workout(self, workout):
         self.workouts.append(workout)
+        self.db.users.update_one(
+            {"email": self.email},
+            {"$push": {"workouts": workout.to_dict()}}
+        )
+
+    def remove_workout(self, workout):
+        self.workouts.remove(workout)
+        self.db.users.update_one({"email": self.email},
+                                 {"$pull": {"workouts": {"date": workout.date}}})
 
     def get_exercise_history(self, exercise_id):
         # Search through workouts for the given exercise_id
@@ -121,19 +158,15 @@ class User:
         for workout in self.workouts:
             for exercise in workout.exercises:
                 if exercise["exercise_id"] == exercise_id:
-                    history.append({"date": workout.date, "sets": exercise["sets"]})
+                    history.append({"title": workout.title, "date": workout.date, "sets": exercise["sets"]})
         return history
 
     def get_all_exercise_details(self):
-        client = MongoClient(
-            "mongodb+srv://dron:gotinpich09@cluster0.re9rrdw.mongodb.net/fitnessAppUsers?retryWrites=true&w=majority/"
-        )
-        db = client["fitnessAppUsers"]
         exercise_ids = []
         for workout in self.workouts:
             exercise_ids = [exercise["exercise_id"] for exercise in workout.exercises]
         if exercise_ids:
-            exercise_details = list(db.exercises.find({"id": {"$in": exercise_ids}}))
+            exercise_details = list(self.db.exercises.find({"id": {"$in": exercise_ids}}))
             return exercise_details
         return print("No exercises")
 

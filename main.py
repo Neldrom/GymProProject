@@ -1,10 +1,12 @@
 from collections import defaultdict
 from kivy.lang import Builder
+from kivymd.uix.dialog import MDDialog
 
 # Custom Screen Modules
 from GymProProject.BodyPartExercisesScreen import BodyPartExercisesScreen
 from GymProProject.EditRoutineScreen import EditRoutineScreen
 from GymProProject.ExercisesScreen import ExercisesScreen
+from GymProProject.MDInputDialog import MDInputDialog
 from GymProProject.RoutineCard import RoutineCard
 from GymProProject.UserWorkoutCard import UserWorkoutCard
 from GymProProject.WorkoutScreen import WorkoutScreen
@@ -16,7 +18,7 @@ from kivymd.app import MDApp
 from kivymd.uix.textfield import MDTextField
 from kivy.core.window import Window
 from pymongo_get_database import get_database
-from kivymd.uix.button import MDRaisedButton
+from kivymd.uix.button import MDRaisedButton, MDFlatButton, MDIconButton
 from kivy_garden.graph import Graph, MeshLinePlot
 from matplotlib.dates import date2num
 
@@ -25,42 +27,80 @@ Window.size = 360, 640
 
 class MainScreen(MDScreen):
     """Main interface managing routines and workouts."""
+
     def __init__(self, db, exercises, **kwargs):
         super().__init__(**kwargs)
         self.exercises = exercises
         self.db = db
         self.user = None
         self.loaded = False
+        self.ids.swiper.bind(height=self.update_size)
 
     def update_statistics_graph(self, workouts):
-        # Function to update the workout statistics graph based on user workouts.
         if len(workouts) == 0:
             return
 
-        date_volumes = defaultdict(float)  # Accumulate volumes for each date
+        date_volumes = defaultdict(float)
+        date_reps = defaultdict(int)
 
         for workout in workouts:
             for exercise in workout.exercises:
                 date = date2num(workout.date)
+
+                # Calculate volume
                 volume = sum(set_data['reps'] * set_data['weight'] for set_data in exercise['sets'])
                 date_volumes[date] += volume
 
+                # Calculate reps
+                reps = sum(set_data['reps'] for set_data in exercise['sets'])
+                date_reps[date] += reps
+
         dates, volumes = zip(*date_volumes.items())
+        _, reps = zip(*date_reps.items())
 
         xmin_number = min(dates).item()
         xmax_number = max(dates).item()
         tick = (xmax_number - xmin_number) / 4
 
-        graph = Graph(xlabel='Date', ylabel='Volume',
-                      x_ticks_major=tick, y_ticks_major=max(volumes) / 2,
-                      y_grid_label=True, padding=5,
-                      x_grid=True, xmin=xmin_number, xmax=xmax_number, ymin=0, ymax=max(volumes))
+        # Create the graph for volume/date
+        graph1 = Graph(xlabel='Date', ylabel='Volume',
+                       x_ticks_major=tick, y_ticks_major=max(volumes) / 2,
+                       y_grid_label=True, padding=5,
+                       x_grid=True, xmin=xmin_number, xmax=xmax_number, ymin=0, ymax=max(volumes))
 
-        plot = MeshLinePlot(color=[1, 0, 0, 1])
-        plot.points = [(date, volume) for date, volume in zip(dates, volumes)]
-        graph.add_plot(plot)
+        plot1 = MeshLinePlot(color=[1, 0, 0, 1])
+        plot1.points = [(date, volume) for date, volume in zip(dates, volumes)]
+        graph1.add_plot(plot1)
 
-        self.ids.statistics.add_widget(graph)
+        # Create the graph for reps/date
+        graph2 = Graph(xlabel='Date', ylabel='Reps',
+                       x_ticks_major=tick, y_ticks_major=max(reps) / 2,
+                       y_grid_label=True, padding=5,
+                       x_grid=True, xmin=xmin_number, xmax=xmax_number, ymin=0, ymax=max(reps))
+
+        plot2 = MeshLinePlot(color=[0, 0, 1, 1])
+        plot2.points = [(date, reps) for date, reps in zip(dates, reps)]
+        graph2.add_plot(plot2)
+
+        self.ids.statistics1.add_widget(graph1)
+        self.ids.statistics2.add_widget(graph2)
+
+        self.ids.swiper.swipe_right()
+        self.ids.swiper.swipe_left()
+
+    def update_size(self, instance, value):
+        swiper_height = value
+        box_height_percentage = 0.4  # Adjust this value as needed
+        box_position_percentage = 0.5  # Adjust this value as needed
+
+        self.ids.statistics1.size_hint_y = None
+        self.ids.statistics1.height = swiper_height * box_height_percentage
+
+        self.ids.statistics2.size_hint_y = None
+        self.ids.statistics2.height = swiper_height * box_height_percentage
+
+        self.ids.statistics1.pos_hint = {"center_y": box_position_percentage}
+        self.ids.statistics2.pos_hint = {"center_y": box_position_percentage}
 
     def update_user_data(self, user):
         # Update user data and load user exercises, routines, and past workouts.
@@ -72,6 +112,10 @@ class MainScreen(MDScreen):
             self.RoutineScreen()
             self.PastWorkoutsScreen()
             self.loaded = True
+
+    def edit_profile(self):
+        dialog = MDInputDialog(self.user, self)
+        dialog.open()
 
     def load_user_exercises(self):
         # Load user exercises from routines and past workouts.
@@ -109,19 +153,17 @@ class MainScreen(MDScreen):
 
     def add_routine_to_user(self, routine):
         # Add a routine to the user's profile.
-        self.user.routines.append(routine)
+        self.user.add_routine(routine)
         self.load_user_exercises()
         self.create_routine_card(routine)
 
     def delete_routine_card(self, routine):
         # Delete a routine card and update the user profile.
-        self.user.routines.remove(routine)
+        self.user.remove_routine(routine)
 
         self.ids.routine_layout.clear_widgets()
         for updated_routine in self.user.routines:
             self.create_routine_card(updated_routine)
-
-        self.db.users.update_one({"email": self.user.email}, {"$pull": {"routines": {"name": routine.name}}})
 
     def edit_routine_card(self, routine):
         # Edit a routine card.
@@ -144,7 +186,6 @@ class MainScreen(MDScreen):
             if routine_layout.children:
                 return
             user_routines = self.user.routines
-            self.routine_layout_width = Window.width - dp(40)
 
             for routine in user_routines:
                 self.create_routine_card(routine)
@@ -163,12 +204,10 @@ class MainScreen(MDScreen):
 
     def delete_workout_card(self, workout):
         # Delete a user workout card.
-        self.user.workouts.remove(workout)
-
+        self.user.remove_workout(workout)
         self.add_user_workout_cards(self.user.workouts)
-
-        self.db.users.update_one({"email": self.user.email}, {"$pull": {"workouts": {"date": workout.date}}})
-        self.ids.statistics.clear_widgets()
+        self.ids.statistics1.clear_widgets()
+        self.ids.statistics2.clear_widgets()
         self.update_statistics_graph(self.user.workouts)
 
     def PastWorkoutsScreen(self):
@@ -181,6 +220,7 @@ class MainScreen(MDScreen):
 
 class LoginScreen(MDScreen):
     """Handles user login with email and password."""
+
     def __init__(self, db, main_screen, **kwargs):
         super().__init__(**kwargs)
         self.db = db
@@ -211,11 +251,24 @@ class LoginScreen(MDScreen):
 
             self.manager.get_screen("edit_routine_screen").user = user
             self.manager.get_screen("workout_screen").user = user
-
+            self.manager.get_screen("exercise_screen").user = user
             self.main_screen.update_user_data(user)
             self.manager.current = 'main'
         else:
-            print("Login failed. Invalid credentials.")
+            self.show_login_popup("Login failed. Invalid credentials.")
+
+    def show_login_popup(self, message):
+        dialog = MDDialog(
+            title="Login Status",
+            text=message,
+            buttons=[
+                MDFlatButton(
+                    text="OK",
+                    on_release=lambda *x: dialog.dismiss()
+                ),
+            ],
+        )
+        dialog.open()
 
     def on_register_button(self, *args):
         # Switch to the register screen.
@@ -223,7 +276,6 @@ class LoginScreen(MDScreen):
 
 
 class RegisterScreen(MDScreen):
-    """Handles user registration with name, email, and password."""
     def __init__(self, db, main_screen, **kwargs):
         super().__init__(**kwargs)
         self.db = db
@@ -237,10 +289,16 @@ class RegisterScreen(MDScreen):
                                           size_hint=(0.8, None), height=dp(40))
         self.register_button = MDRaisedButton(text="Register", pos_hint={'center_x': 0.5, 'center_y': 0.5},
                                               on_release=self.on_register)
+
+        # Add a back button to navigate back to the login screen
+        self.back_button = MDIconButton(icon='arrow-left', pos_hint={'center_x': 0.1, 'center_y': 0.9},
+                                        on_release=self.on_back_button)
+
         self.add_widget(self.name_input)
         self.add_widget(self.email_input)
         self.add_widget(self.password_input)
         self.add_widget(self.register_button)
+        self.add_widget(self.back_button)
 
     def on_register(self, *args):
         # Event handler for the register button press.
@@ -260,16 +318,36 @@ class RegisterScreen(MDScreen):
 
         if result.inserted_id:
             self.manager.current = 'login'
+            self.show_register_popup("Registration successful.")
         else:
             print("Registration failed.")
+            self.show_register_popup("Registration failed.")
+
+    def on_back_button(self, *args):
+        # Event handler for the back button press.
+        self.manager.current = 'login'
+
+    def show_register_popup(self, message):
+        dialog = MDDialog(
+            title="Registration Status",
+            text=message,
+            buttons=[
+                MDFlatButton(
+                    text="OK",
+                    on_release=lambda *x: dialog.dismiss()
+                ),
+            ],
+        )
+        dialog.open()
 
 
 class GymProApp(MDApp):
-    """Main application class."""
+
     def __init__(self):
         super().__init__()
         self.db = get_database()
         self.exercises = self.db.exercises.find()
+        self.print = 'test'
 
     def build(self):
         # Build the application and set up screens.

@@ -8,6 +8,7 @@ from kivymd.uix.screen import MDScreen
 # Import custom ClickableTwoLineListItem class
 from GymProProject.ClickableTwoLineListItem import ClickableTwoLineListItem
 
+
 class BodyPartExercisesScreen(MDScreen):
     """
     BodyPartExercisesScreen class represents the screen for displaying and selecting exercises
@@ -45,13 +46,6 @@ class BodyPartExercisesScreen(MDScreen):
     """
 
     def __init__(self, exercises, **kwargs):
-        """
-        Initializes the BodyPartExercisesScreen.
-
-        Parameters:
-            exercises (list): List of exercises to display.
-            **kwargs: Additional keyword arguments for MDScreen.
-        """
         super().__init__(**kwargs)
         self.exercises = exercises
         self.selected_exercises = []
@@ -62,23 +56,17 @@ class BodyPartExercisesScreen(MDScreen):
         Method called before entering the screen.
         Clears existing widgets and adds filtered exercises.
         """
-        # Clear existing widgets
         self.ids.exercise_screen.clear_widgets()
-
         # Set scroll_y to 1 to keep it at the top
         self.ids.exercise_screen.scroll_y = 1
-
-        # Add the exercises to the layout
         self.add_filtered_exercises()
 
     def add_filtered_exercises(self):
         """
         Adds filtered exercises to the layout based on the search text.
         """
-        # Filter exercises based on the search text
         filtered_exercises = [exercise for exercise in self.exercises if
                               self.search_text.lower() in exercise['name'].lower()]
-
         # Add filtered exercises to the layout
         for i, exercise in enumerate(filtered_exercises):
             # Create ClickableTwoLineListItem with dynamic height

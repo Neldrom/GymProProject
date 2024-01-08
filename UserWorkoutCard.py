@@ -9,7 +9,7 @@ from kivymd.uix.label import MDLabel
 from tzlocal import get_localzone
 
 
-class UserWorkoutCard(MDCard):
+class UserWorkoutCard(MDBoxLayout):
     """
     Represents a card displaying information about a user's workout.
 
@@ -34,16 +34,18 @@ class UserWorkoutCard(MDCard):
         """
         super().__init__(**kwargs)
         self.orientation = 'vertical'
-        self.size_hint_y = None
+        self.adaptive_height = True
         self.workout = workout
+        self.md_bg_color = (0, 0, 0, .5)
+        self.radius = 15
         local_timezone = get_localzone()
         local_date = workout.date.replace(tzinfo=pytz.UTC).astimezone(local_timezone)
 
         # First Row - Date
-        first_row_box = MDBoxLayout(orientation="horizontal", padding=10)
+        first_row_box = MDBoxLayout(orientation="horizontal", padding=10, adaptive_height = True)
         first_row_box.add_widget(
             MDLabel(text=f"{workout.title}    ||     {local_date.strftime('%m/%d/%Y, %H:%M:%S')}",
-                    halign="center"))
+                    halign="center", adaptive_height=True, pos_hint={'center_y': 0.5}))
         delete_button = MDIconButton(
             icon='trash-can',
             pos_hint={'center_y': 0.5},
@@ -52,13 +54,10 @@ class UserWorkoutCard(MDCard):
         first_row_box.add_widget(delete_button)
 
         # Second Row - Volume and Sets
-        second_row_box = MDBoxLayout(orientation="horizontal", padding=10)
+        second_row_box = MDBoxLayout(orientation="horizontal", padding=10, adaptive_height=True)
 
         # Exercises Layout
-        exercises_layout = MDBoxLayout(orientation="vertical", spacing=10, padding=10)
-        exercises_layout.size_hint_y = None
-        first_row_box.height = dp(50)  # Set initial height to 0
-        second_row_box.height = dp(30)  # Set initial height to 0
+        exercises_layout = MDBoxLayout(orientation="vertical", spacing=10, padding=10, adaptive_height=True)
 
         volume = 0
         sets = 0
@@ -67,9 +66,10 @@ class UserWorkoutCard(MDCard):
         # Loop through exercises in the workout
         for e in workout.exercises:
             exercise = exercise_dict[e["exercise_id"]]
-            exercise_label = MDLabel(text=f"{exercise['name'].title()}", theme_text_color="Primary", font_style="H6")
+            exercise_label = MDLabel(text=f"{exercise['name'].title()}", theme_text_color="Primary", font_style="H6",
+                                     adaptive_height=True)
 
-            set_info_layout = MDBoxLayout(orientation="vertical")
+            set_info_layout = MDBoxLayout(orientation="vertical", adaptive_height = True)
             set_info_layout.add_widget(exercise_label)
             set_height = dp(30)
 
@@ -77,7 +77,8 @@ class UserWorkoutCard(MDCard):
             for set_data in e['sets']:
                 reps = set_data["reps"]
                 weight = set_data["weight"]
-                set_info = MDLabel(text=f"Reps: {reps}, Weight: {weight}", theme_text_color="Secondary")
+                set_info = MDLabel(text=f"Reps: {reps}, Weight: {weight}", theme_text_color="Secondary",
+                                   adaptive_height=True)
                 set_info_layout.add_widget(set_info)
                 volume += weight * reps
                 sets += 1
@@ -87,8 +88,10 @@ class UserWorkoutCard(MDCard):
             ex_height += set_height
             exercises_layout.add_widget(set_info_layout)
 
-        second_row_box.add_widget(MDLabel(text=f"Volume: {str(volume)}", theme_text_color="Secondary"))
-        second_row_box.add_widget(MDLabel(text=f"Sets: {str(sets)}", theme_text_color="Secondary"))
+        second_row_box.add_widget(MDLabel(text=f"Volume: {str(volume)}", theme_text_color="Secondary",
+                                          adaptive_height=True))
+        second_row_box.add_widget(MDLabel(text=f"Sets: {str(sets)}", theme_text_color="Secondary",
+                                          adaptive_height=True))
 
         # Adding content to the card
         self.add_widget(first_row_box)
